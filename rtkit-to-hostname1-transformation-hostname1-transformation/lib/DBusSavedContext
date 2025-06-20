@@ -1,0 +1,89 @@
+/*
+    Copyright (c) 2023 Serenity Cyber Security, LLC <license@futurecrew.ru>
+                       Author: Gleb Popov <arrowd@FreeBSD.org>
+    Copyright (c) 2024-2025 Future Crew, LLC <license@futurecrew.ru>
+                       Author: Gleb Popov <arrowd@FreeBSD.org>
+
+    Redistribution and use in source and binary forms, with or without modification,
+    are permitted provided that the following conditions are met:
+    1. Redistributions of source code must retain the above copyright notice,
+    this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright notice,
+    this list of conditions and the following disclaimer in the documentation
+    and/or other materials provided with the distribution.
+    3. Neither the name of the copyright holder nor the names of its contributors may
+    be used to endorse or promote products derived from this software without specific
+    prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+    IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+    INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+    OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+    ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+#pragma once
+
+#include <QDBusConnection>
+#include <QDBusMessage>
+
+// clang-format off
+#define DBUS_THROW(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QStringLiteral(descr), this, return {})
+#define DBUS_THROW_CONTEXT(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QStringLiteral(descr), context, return {})
+#define DBUS_THROW_CONTEXT_LATIN1(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QLatin1String(descr), context, return {})
+#define DBUS_THROW_CONTEXT_VOID(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QLatin1String(descr), context, return)
+
+#define CO_DBUS_THROW(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QStringLiteral(descr), this, co_return {})
+#define CO_DBUS_THROW_CONTEXT(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QStringLiteral(descr), context, co_return {})
+#define CO_DBUS_THROW_CONTEXT_LATIN1(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QLatin1String(descr), context, co_return {})
+#define CO_DBUS_THROW_CONTEXT_VOID(id, descr) DBUS_THROW_CONTEXT_IMPL(QStringLiteral(id), QLatin1String(descr), context, co_return)
+
+#define DBUS_THROW_CONTEXT_IMPL(id, descr, context, ret) { \
+    if (context) { \
+        context->setDelayedReply(true); \
+        context->connection().send(context->message().createErrorReply(id, descr)); \
+    } \
+    ret; \
+    }
+
+#define DBUS_RETHROW_CONTEXT(reply) DBUS_RETHROW_CONTEXT_IMPL(reply, return {})
+#define DBUS_RETHROW_CONTEXT_VOID(reply) DBUS_RETHROW_CONTEXT_IMPL(reply, return)
+
+#define CO_DBUS_RETHROW_CONTEXT(reply) DBUS_RETHROW_CONTEXT_IMPL(reply, co_return {})
+#define CO_DBUS_RETHROW_CONTEXT_VOID(reply) DBUS_RETHROW_CONTEXT_IMPL(reply, co_return)
+
+#define DBUS_RETHROW_CONTEXT_IMPL(reply, ret) { \
+    if (context) { \
+        context->setDelayedReply(true); \
+        context->connection().send(context->message().createErrorReply(reply.error())); \
+    } \
+    ret; \
+    }
+// clang-format on
+
+class QDBusContext;
+
+class DBusSavedContext
+{
+public:
+    explicit DBusSavedContext();
+    explicit DBusSavedContext(const QDBusContext * context);
+    explicit DBusSavedContext(const DBusSavedContext& context);
+
+    [[nodiscard]] QDBusConnection connection() const;
+    [[nodiscard]] const QDBusMessage & message() const;
+    void sendErrorReply(const QString & name, const QString & msg = QString()) const;
+    void sendReply() const;
+    void sendReply(const QVariant & arg) const;
+    void sendReply(const QList<QVariant> & args) const;
+    void setDelayedReply(bool enable) const;
+
+private:
+    QDBusConnection m_connection;
+    QDBusMessage m_message;
+};

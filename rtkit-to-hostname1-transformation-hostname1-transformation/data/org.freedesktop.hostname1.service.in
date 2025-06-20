@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.freedesktop.hostname1
+Exec=@CMAKE_INSTALL_PREFIX@/libexec/hostnamed
+User=root

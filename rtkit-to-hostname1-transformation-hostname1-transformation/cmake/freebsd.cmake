@@ -1,0 +1,2 @@
+list(APPEND PLATFORM_LIBRARIES kvm)
+set(PLATFORM_LIBRARIES ${PLATFORM_LIBRARIES} CACHE INTERNAL "Dependencies for platform-specific code" FORCE)
